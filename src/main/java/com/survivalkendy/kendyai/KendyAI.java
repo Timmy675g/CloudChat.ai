@@ -34,10 +34,17 @@ public class KendyAI implements ModInitializer {
     private static String AI_NAME = "CloudChat"; // Configurable branding and command settings
     private static String COMMAND_NAME = "cloudchat"; // AI backend configuration loaded from config or cloudchat or cloudchat.properties
 
+    // Server awareness and guardrail settings
+    private static boolean SAFE_MODE = true;
+
+    private static boolean ALLOW_ONLINE_PLAYER_COUNT = true;
+    private static boolean ALLOW_PLAYER_COORDINATES = false;
+    private static boolean ALLOW_DIMENSION = true;
+    private static boolean ALLOW_WORLD_TIME = true;
 
     private static String WORKER_URL = "";
     private static String API_SECRET = "";
-    private static String SYSTEM_PROMPT = "You are CloudChat.ai, a helpful Minecraft server assistant. Keep replies short, friendly, and accurate.";
+    private static String SYSTEM_PROMPT = "You are CloudChat, a helpful Minecraft server assistant. Never invent server data, coordinates, player counts, structures, inventories, commands, or admin information. Only use data provided by the server context. If data is not provided, clearly say you do not have access to it.";
     private static long COOLDOWN_MS = 10_000;
     private static int MAX_MESSAGE_LENGTH = 300;
 
@@ -91,12 +98,32 @@ public class KendyAI implements ModInitializer {
 
                             COOLDOWNS.put(player, now);
 
+                            int onlinePlayers = context.getSource().getServer().getPlayerCount();
+                            int maxPlayers = context.getSource().getServer().getMaxPlayers();
+
+                            String dimension = context.getSource()
+                                    .getLevel()
+                                    .dimension()
+                                    .location()
+                                    .toString();
+
+                            long worldTime = context.getSource()
+                                    .getLevel()
+                                    .getDayTime();
+
                             context.getSource().sendSuccess(
                                 () -> Component.literal("§e" + AI_NAME + " is thinking..."),
                                 false
                             );
 
-                            askAI(player, message, reply -> {
+                            askAI(
+                                player,
+                                message,
+                                onlinePlayers,
+                                maxPlayers,
+                                dimension,
+                                worldTime,
+                                reply -> {
                                 context.getSource().getServer().execute(() -> {
                                     context.getSource().sendSuccess(
                                         () -> Component.literal("§b" + AI_NAME + ": §f" + reply),
@@ -143,6 +170,13 @@ private static void loadConfig() {
             props.setProperty("cooldown_seconds", "10");
             props.setProperty("max_message_length", "300");
 
+            props.setProperty("safe_mode", "true");
+
+            props.setProperty("allow_online_player_count", "true");
+            props.setProperty("allow_player_coordinates", "false");
+            props.setProperty("allow_dimension", "true");
+            props.setProperty("allow_world_time", "true");
+
             try (OutputStream output = Files.newOutputStream(configFile)) {
                 props.store(output, "CloudChat Configuration");
             }
@@ -174,6 +208,26 @@ private static void loadConfig() {
                 props.getProperty("max_message_length", "300").trim()
         );
 
+        SAFE_MODE = Boolean.parseBoolean(
+        props.getProperty("safe_mode", "true").trim()
+        );
+
+        ALLOW_ONLINE_PLAYER_COUNT = Boolean.parseBoolean(
+                props.getProperty("allow_online_player_count", "true").trim()
+        );
+
+        ALLOW_PLAYER_COORDINATES = Boolean.parseBoolean(
+                props.getProperty("allow_player_coordinates", "false").trim()
+        );
+
+        ALLOW_DIMENSION = Boolean.parseBoolean(
+                props.getProperty("allow_dimension", "true").trim()
+        );
+
+        ALLOW_WORLD_TIME = Boolean.parseBoolean(
+                props.getProperty("allow_world_time", "true").trim()
+        );
+
         System.out.println("[" + AI_NAME + "] Config loaded.");
 
     } catch (Exception e) {
@@ -181,7 +235,15 @@ private static void loadConfig() {
     }
 }
     // Sends player messages to the AI Worker asynchronously
-    private static void askAI(String player, String message, ReplyCallback callback) {
+    private static void askAI(
+        String player,
+        String message,
+        int onlinePlayers,
+        int maxPlayers,
+        String dimension,
+        long worldTime,
+        ReplyCallback callback
+    ) {
         try {
             System.out.println("[" + AI_NAME + "] Request from player: " + player);
             System.out.println("[" + AI_NAME + "] Message: " + message);
@@ -192,6 +254,26 @@ private static void loadConfig() {
             json.addProperty("player", player);
             json.addProperty("message", message);
             json.addProperty("system_prompt", SYSTEM_PROMPT);
+
+            json.addProperty("safe_mode", SAFE_MODE);
+
+            json.addProperty("can_access_online_player_count", ALLOW_ONLINE_PLAYER_COUNT);
+            json.addProperty("can_access_player_coordinates", ALLOW_PLAYER_COORDINATES);
+            json.addProperty("can_access_dimension", ALLOW_DIMENSION);
+            json.addProperty("can_access_world_time", ALLOW_WORLD_TIME);
+
+            if (ALLOW_ONLINE_PLAYER_COUNT) {
+                json.addProperty("online_players", onlinePlayers);
+                json.addProperty("max_players", maxPlayers);
+            }
+
+            if (ALLOW_DIMENSION) {
+                json.addProperty("dimension", dimension);
+            }
+
+            if (ALLOW_WORLD_TIME) {
+                json.addProperty("world_time", worldTime);
+            }
 
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(WORKER_URL))
