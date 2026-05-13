@@ -48,8 +48,22 @@ export default {
       can_access_player_coordinates
     } = data;
 
-    const selectedModel =
-      model || "@cf/meta/llama-3.1-8b-instruct";
+    const defaultModel = "@cf/meta/llama-3.1-8b-instruct";
+    const allowedModels = new Set([
+      defaultModel
+    ]);
+
+    if (
+      model !== undefined &&
+      (typeof model !== "string" || !allowedModels.has(model))
+    ) {
+      return Response.json(
+        { error: "Unsupported model" },
+        { status: 400 }
+      );
+    }
+
+    const selectedModel = model || defaultModel;
 
     let serverContext = "";
 
