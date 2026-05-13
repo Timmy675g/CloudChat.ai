@@ -43,3 +43,7 @@ replay_*.log
 *.properties
 .env
 config/
+
+!gradle.properties
+!gradle/wrapper/gradle-wrapper.properties
+!src/main/resources/kendyai.example.properties
