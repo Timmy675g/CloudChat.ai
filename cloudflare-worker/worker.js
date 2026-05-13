@@ -96,21 +96,31 @@ Important rules:
 - If the requested data is not provided, say you do not have access to it.
 `;
 
-    const aiResponse = await env.AI.run(selectedModel, {
-      messages: [
-        {
-          role: "system",
-          content: `${system_prompt}\n\n${serverContext}`
-        },
-        {
-          role: "user",
-          content: `${player}: ${message}`
-        }
-      ]
-    });
+    try {
+      const aiResponse = await env.AI.run(selectedModel, {
+        messages: [
+          {
+            role: "system",
+            content: `${system_prompt}\n\n${serverContext}`
+          },
+          {
+            role: "user",
+            content: `${player}: ${message}`
+          }
+        ]
+      });
 
-    return Response.json({
-      reply: aiResponse.response || "No response from AI."
-    });
+      return Response.json({
+        reply: aiResponse.response || "No response from AI."
+      });
+    } catch (error) {
+      return Response.json(
+        {
+          error: "Failed to get response from AI service",
+          details: error instanceof Error ? error.message : "Unknown AI error"
+        },
+        { status: 502 }
+      );
+    }
   }
 };
