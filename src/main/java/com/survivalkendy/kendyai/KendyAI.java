@@ -18,13 +18,20 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KendyAI implements ModInitializer {
     private static final Gson GSON = new Gson();
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     private static String WORKER_URL = "";
     private static String API_SECRET = "";
+
+    private static final Map<String, Long> COOLDOWNS = new ConcurrentHashMap<>();
+    private static final long COOLDOWN_MS = 10_000; // 10 seconds
+    private static final int MAX_MESSAGE_LENGTH = 300;
 
     @Override
     public void onInitialize() {
@@ -47,6 +54,30 @@ public class KendyAI implements ModInitializer {
                                 );
                                 return 0;
                             }
+
+                            if (message.length() > MAX_MESSAGE_LENGTH) {
+                                context.getSource().sendSuccess(
+                                    () -> Component.literal("§cYour message is too long. Max " + MAX_MESSAGE_LENGTH + " characters."),
+                                    false
+                                );
+                                return 0;
+                            }
+
+                            long now = System.currentTimeMillis();
+                            long lastUsed = COOLDOWNS.getOrDefault(player, 0L);
+                            long remaining = COOLDOWN_MS - (now - lastUsed);
+
+                            if (remaining > 0) {
+                                long seconds = (remaining + 999) / 1000;
+
+                                context.getSource().sendSuccess(
+                                    () -> Component.literal("§cPlease wait " + seconds + "s before using KendyAI again."),
+                                    false
+                                );
+                                return 0;
+                            }
+
+                            COOLDOWNS.put(player, now);
 
                             context.getSource().sendSuccess(
                                 () -> Component.literal("§eKendyAI is thinking..."),
@@ -104,24 +135,38 @@ public class KendyAI implements ModInitializer {
                 .POST(HttpRequest.BodyPublishers.ofString(json.toString(), StandardCharsets.UTF_8))
                 .build();
 
-            HttpClient.newHttpClient()
+            HTTP_CLIENT
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenAccept(body -> {
-                    JsonObject response = GSON.fromJson(body, JsonObject.class);
+                    System.out.println("[KendyAI] Raw response: " + body);
 
-                    String reply = response.has("reply")
-                        ? response.get("reply").getAsString()
-                        : "No response from KendyAI.";
+                    try {
+                        JsonObject response = GSON.fromJson(body, JsonObject.class);
 
-                    callback.reply(reply);
+                        String reply;
+
+                        if (response.has("reply")) {
+                            reply = response.get("reply").getAsString();
+                        } else if (response.has("error")) {
+                            reply = "Worker error: " + response.get("error").getAsString();
+                        } else {
+                            reply = "Unexpected response from KendyAI.";
+                        }
+
+                        callback.reply(reply);
+                    } catch (Exception e) {
+                        callback.reply("Invalid response from KendyAI.");
+                    }
                 })
                 .exceptionally(error -> {
+                    System.out.println("[KendyAI] Request failed: " + error.getMessage());
                     callback.reply("KendyAI is offline right now.");
                     return null;
                 });
 
         } catch (Exception e) {
+            System.out.println("[KendyAI] Error: " + e.getMessage());
             callback.reply("KendyAI had an error.");
         }
     }
