@@ -124,6 +124,10 @@ public class KendyAI implements ModInitializer {
 
     private static void askAI(String player, String message, ReplyCallback callback) {
         try {
+            System.out.println("[KendyAI] Request from player: " + player);
+            System.out.println("[KendyAI] Message: " + message);
+            System.out.println("[KendyAI] Sending request to Worker...");
+
             JsonObject json = new JsonObject();
             json.addProperty("player", player);
             json.addProperty("message", message);
@@ -137,7 +141,10 @@ public class KendyAI implements ModInitializer {
 
             HTTP_CLIENT
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
+                .thenApply(response -> {
+                    System.out.println("[KendyAI] Worker status: " + response.statusCode());
+                    return response.body();
+                })
                 .thenAccept(body -> {
                     System.out.println("[KendyAI] Raw response: " + body);
 
