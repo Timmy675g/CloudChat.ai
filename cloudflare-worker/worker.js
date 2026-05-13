@@ -1,4 +1,4 @@
-// Note : Code Last Updated was : V1.1.3 ( Backend and Model Revamp )
+// Last updated: v1.1.3 (Backend and model revamp)
 
 export default {
   async fetch(request, env) {
