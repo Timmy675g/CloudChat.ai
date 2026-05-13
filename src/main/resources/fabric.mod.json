@@ -1,17 +1,17 @@
 {
 	"schemaVersion": 1,
-	"id": "kendyai",
+	"id": "cloudchat",
 	"version": "${version}",
-	"name": "KendyAI",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "CloudChat",
+	"description": "I-powered in-game chat assistant for Minecraft servers using Cloudflare Workers AI.",
 	"authors": [
-		"Me!"
+		"Timmy675g"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT License",
 	"icon": "assets/kendyai/icon.png",
 	"environment": "*",
 	"entrypoints": {

@@ -24,7 +24,7 @@ It allows players to communicate with an AI directly in-game using customizable 
 
 - Minecraft Fabric Server
 - Fabric API
-- Java 21+
+- Java 25
 - Cloudflare Worker AI backend (or compatible API)
 
 ---
@@ -62,7 +62,8 @@ ai_name=CloudChat
 command_name=cloudchat
 
 worker_url=https://your-worker.workers.dev
-api_secret=replace_me
+api_secret=replace_me 
+Note : api_secret is not your API! It's your API Password! 
 
 system_prompt=You are a friendly Minecraft server assistant.
 

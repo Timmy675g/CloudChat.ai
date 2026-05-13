@@ -104,12 +104,11 @@ public class KendyAI implements ModInitializer {
                             String dimension = context.getSource()
                                     .getLevel()
                                     .dimension()
-                                    .location()
                                     .toString();
 
                             long worldTime = context.getSource()
                                     .getLevel()
-                                    .getDayTime();
+                                    .getGameTime();
 
                             context.getSource().sendSuccess(
                                 () -> Component.literal("§e" + AI_NAME + " is thinking..."),
