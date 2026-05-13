@@ -44,6 +44,7 @@ public class KendyAI implements ModInitializer {
 
     private static String WORKER_URL = "";
     private static String API_SECRET = "";
+    private static String MODEL = "@cf/meta/llama-3.1-8b-instruct";
     private static String SYSTEM_PROMPT = "You are CloudChat, a helpful Minecraft server assistant. Never invent server data, coordinates, player counts, structures, inventories, commands, or admin information. Only use data provided by the server context. If data is not provided, clearly say you do not have access to it.";
     private static long COOLDOWN_MS = 10_000;
     private static int MAX_MESSAGE_LENGTH = 300;
@@ -161,6 +162,8 @@ private static void loadConfig() {
             props.setProperty("worker_url", "https://your-worker.workers.dev");
             props.setProperty("api_secret", "replace_me");
 
+            props.setProperty("model", "@cf/meta/llama-3.1-8b-instruct");
+
             props.setProperty(
                 "system_prompt",
                 "You are a friendly Minecraft server assistant."
@@ -177,7 +180,39 @@ private static void loadConfig() {
             props.setProperty("allow_world_time", "true");
 
             try (OutputStream output = Files.newOutputStream(configFile)) {
-                props.store(output, "CloudChat Configuration");
+                props.store(output,
+                    """
+                    CloudChat Configuration
+                    
+                    API Secret Notes:
+                    
+                    The api_secret is your API password/token used for authentication.
+                    
+                    You can name it anything you want.
+                    You do NOT need to generate it from Cloudflare.
+                    
+                    This is NOT your Worker URL.
+                    
+                    Example:
+                    worker_url=https://your-worker.workers.dev
+                    api_secret=your_secret_token
+                    
+                    
+                    Recommended AI Models:
+                    
+                    @cf/meta/llama-3.1-8b-instruct
+                    - Best balanced model for Minecraft servers
+                    
+                    @cf/meta/llama-3.2-3b-instruct
+                    - Faster and lightweight
+                    
+                    @cf/mistral/mistral-7b-instruct-v0.1
+                    - Good alternative conversational model
+                    
+                    Browse more Cloudflare Workers AI models:
+                    https://developers.cloudflare.com/workers-ai/models/
+                    """
+                );
             }
 
             System.out.println("[CloudChat] Generated default config.");
@@ -193,6 +228,11 @@ private static void loadConfig() {
 
         WORKER_URL = props.getProperty("worker_url", "").trim();
         API_SECRET = props.getProperty("api_secret", "").trim();
+
+        MODEL = props.getProperty(
+                "model",
+                "@cf/meta/llama-3.1-8b-instruct"
+        ).trim();
 
         SYSTEM_PROMPT = props.getProperty(
                 "system_prompt",
@@ -253,6 +293,8 @@ private static void loadConfig() {
             json.addProperty("player", player);
             json.addProperty("message", message);
             json.addProperty("system_prompt", SYSTEM_PROMPT);
+
+            json.addProperty("model", MODEL);
 
             json.addProperty("safe_mode", SAFE_MODE);
 
